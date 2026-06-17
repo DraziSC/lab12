@@ -53,7 +53,8 @@ schema = StructType([
 stream_df = (
     spark.readStream.format("kafka")
     #.option("kafka.bootstrap.servers", "localhost:9092")
-    .option("kafka.bootstrap.servers", "172.17.0.1:9092") 
+    #.option("kafka.bootstrap.servers", "172.17.0.1:9092") 
+    .option("kafka.bootstrap.servers", "kafka:29092")
     .option("subscribe", topicKafka)
     .option("startingOffsets", "earliest")
     .load()
