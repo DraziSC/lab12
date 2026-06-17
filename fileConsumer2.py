@@ -41,6 +41,9 @@ spark = (
     .getOrCreate()
 )
 
+# suppress all logs except for errors
+spark.sparkContext.setLogLevel("ERROR")
+
 # 2. Read from Kafka
 topicKafka = "myTopic" # Replace with your Kafka topic name
 
@@ -83,17 +86,14 @@ parsed_states = (
 
 parsed_states.printSchema()
 
-# Here edit code to include the required functionalities
-
-# 1-Group by origin_country and count the number of flights per country
-
-
-# 2- get the average velocity of flights per country not on the ground (on_ground = false)
-
-
-# 3 - Get the number of flights  for country of Portugal (origin_country = "Portugal") and the average velocity of  flights not on the ground (on_ground = false)
-
-
+# What are the top 10 flights with a higher altitude (consider the geometric
+# altitude, as it corresponds to the one, we are used to). You need to provide the code
+# with this functionality.
+top_10_highest_altitude_flights = (
+    parsed_states
+    .filter(col("geo_altitude").isNotNull())
+    .orderBy(col("geo_altitude").desc())
+)
 
 query = (
     parsed_states.writeStream
@@ -103,4 +103,37 @@ query = (
     .start()
 )
 
+print("doing query")
+def show_top_10(batch_df, batch_id):
+    (
+        batch_df
+        .filter(col("geo_altitude").isNotNull())
+        .orderBy(col("geo_altitude").desc())
+        .limit(10)
+        .show(truncate=False)
+    )
+
+top_10_highest_altitude_flights_query = (
+    parsed_states.writeStream
+    .foreachBatch(show_top_10)
+    .outputMode("append")
+    #.option("checkpointLocation", "checkpoints/new_top_10_highest_altitude_flights")
+    .start()
+)
+
+# ount the number of flights of Portugal on the ground.
+portugal_flights_on_ground = (
+    parsed_states
+    .filter((col("origin_country") == "Portugal") & (col("on_ground") == True))
+    .groupBy("origin_country")
+    .count()
+)
+
+portugal_flights_on_ground_query = (
+    portugal_flights_on_ground.writeStream
+    .format("console")
+    .outputMode("complete")
+    #.option("checkpointLocation", "checkpoints/new_portugal_flights_on_ground")
+    .start()
+)
 query.awaitTermination()
