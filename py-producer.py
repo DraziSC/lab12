@@ -63,7 +63,21 @@ if __name__ == "__main__":
     # loop over the API and produce messages and call every second
     while True:
         messages = [get_messages_from_api()]
-        produce_messages(topic, messages)
-        print("All messages produced.", messages)
+        # messages is too big to be sent in one message, so we need to split it into smaller messages
+        # we can split the states into smaller messages and send them separately
+        states = messages[0]['states']
+        batch_size = 100  # Number of states per message
+        messages_to_send = []
+        for i in range(0, len(states), batch_size):
+            batch = states[i:i + batch_size]
+            message = {
+                "ingest_ts": messages[0]['ingest_ts'],
+                "api_ts": messages[0]['api_ts'],
+                "states": batch
+            }
+            messages_to_send.append(message)
+            print(f"Prepared message with {len(batch)} states to send.")
+        produce_messages(topic, messages_to_send)
+        print("All messages produced.")
         exit()
         sleep(1)  # Wait for 1 second before fetching new messages
