@@ -45,7 +45,8 @@ def json_serializer(data):
 
 producer = KafkaProducer(
     bootstrap_servers=['localhost:9092'],
-    value_serializer=json_serializer
+    value_serializer=json_serializer,
+    max_request_size=10485760  # 10 MB
 )
 
 def produce_messages(topic, messages):
@@ -60,7 +61,7 @@ if __name__ == "__main__":
     # loop over the API and produce messages and call every second
     while True:
         messages = [get_messages_from_api()]
-        #produce_messages(topic, messages)
+        produce_messages(topic, messages)
         print("All messages produced.", messages)
         exit()
         sleep(1)  # Wait for 1 second before fetching new messages
