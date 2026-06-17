@@ -62,4 +62,5 @@ if __name__ == "__main__":
         messages = [get_messages_from_api()]
         #produce_messages(topic, messages)
         print("All messages produced.", messages)
+        exit()
         sleep(1)  # Wait for 1 second before fetching new messages
