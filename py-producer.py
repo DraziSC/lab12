@@ -54,7 +54,7 @@ producer = KafkaProducer(
 def produce_messages(topic, messages):
     for message in messages:
         producer.send(topic, value=message)
-        print(f"Produced message: {message}")
+        print(f"Produced messages messgage to topic {topic}")
         #sleep(1)  # Simulate some delay between messages
     producer.flush()  # Ensure all messages are sent
     
