@@ -52,11 +52,14 @@ def produce_messages(topic, messages):
     for message in messages:
         producer.send(topic, value=message)
         print(f"Produced message: {message}")
-        sleep(1)  # Simulate some delay between messages
+        #sleep(1)  # Simulate some delay between messages
     producer.flush()  # Ensure all messages are sent
     
 if __name__ == "__main__":
-    topic = 'user' # Change to your topic name
-    messages = [get_messages_from_api()]
-    #produce_messages(topic, messages)
-    print("All messages produced.", messages)
+    topic = 'myTopic' # Change to your topic name
+    # loop over the API and produce messages and call every second
+    while True:
+        messages = [get_messages_from_api()]
+        #produce_messages(topic, messages)
+        print("All messages produced.", messages)
+        sleep(1)  # Wait for 1 second before fetching new messages
