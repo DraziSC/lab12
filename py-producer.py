@@ -46,7 +46,9 @@ def json_serializer(data):
 producer = KafkaProducer(
     bootstrap_servers=['localhost:9092'],
     value_serializer=json_serializer,
-    max_request_size=10485760  # 10 MB
+    max_request_size=10485760,
+    batch_size=16384,  # 16k
+    linger_ms=50
 )
 
 def produce_messages(topic, messages):
