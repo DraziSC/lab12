@@ -1,0 +1,62 @@
+'''
+Python Kafka Producer Example
+'''
+
+from kafka import KafkaProducer
+import json
+from time import sleep
+
+import os
+import json
+import requests
+from datetime import datetime, timezone
+
+API_URL = "https://opensky-network.org/api/states/all"
+OUT_DIR = "data/opensky_raw"
+
+def fetch_and_save():
+    os.makedirs(OUT_DIR, exist_ok=True)
+    r = requests.get(API_URL, timeout=30)
+    r.raise_for_status()
+    payload = r.json()
+    record = {
+        "ingest_ts": datetime.now(timezone.utc).isoformat(),
+        "api_ts": payload.get("time"),
+        "states": payload.get("states")
+    }
+    filename = f"opensky_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')}.json"
+    path = os.path.join(OUT_DIR, filename)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(record, f)
+
+def get_messages_from_api():
+    r = requests.get(API_URL, timeout=30)
+    r.raise_for_status()
+    payload = r.json()
+    record = {
+        "ingest_ts": datetime.now(timezone.utc).isoformat(),
+        "api_ts": payload.get("time"),
+        "states": payload.get("states")
+    }
+    return record
+
+def json_serializer(data):
+    return json.dumps(data).encode('utf-8')
+
+producer = KafkaProducer(
+    bootstrap_servers=['localhost:9092'],
+    value_serializer=json_serializer
+)
+
+def produce_messages(topic, messages):
+    for message in messages:
+        producer.send(topic, value=message)
+        print(f"Produced message: {message}")
+        sleep(1)  # Simulate some delay between messages
+    producer.flush()  # Ensure all messages are sent
+    
+if __name__ == "__main__":
+    topic = 'user' # Change to your topic name
+    messages = [get_messages_from_api()]
+    #produce_messages(topic, messages)
+    print("All messages produced.", messages)

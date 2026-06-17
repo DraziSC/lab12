@@ -1,0 +1,96 @@
+# Merged Docker Compose file: Kafka + Kafka UI + Apache Spark
+# Spark containers can reach Kafka using: kafka:29092
+# From your host machine, Kafka is reachable on: localhost:9092
+
+services:
+  kafka:
+    container_name: kafka
+    image: apache/kafka:4.3.0
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:29093"
+      KAFKA_LISTENERS: "PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_LOG_DIRS: "/tmp/kafka-combined-logs"
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+    volumes:
+      - ./kafka-config:/opt/kafka/config/
+      - ./kafka-data:/tmp/kafka-combined-logs
+    networks:
+      - aii-network
+
+  kafbat-ui:
+    container_name: kafbat-ui
+    image: ghcr.io/kafbat/kafka-ui:latest
+    depends_on:
+      - kafka
+    ports:
+      - "8082:8080"
+    environment:
+      DYNAMIC_CONFIG_ENABLED: "true"
+      #DYNAMIC_CONFIG_ENABLED: "true"
+      SWAGGER_UI_ENABLED: "true"
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_NAME: myKafka
+    #volumes:
+      #- ./kafka.ui-config.yml:/etc/kafkaui/dynamic_config.yaml
+    networks:
+      - aii-network
+
+  spark-master:
+    image: spark-custom:latest
+    container_name: spark-master
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+      - "18080:18080"    # History Server UI
+      - "4040:4040"      # Spark Application UI
+      - "9999:9999"      # Custom port for additional services
+    environment:
+      - SPARK_MODE=master
+      - SPARK_CONF_spark_hadoop_fs_viewfs_impl_disable=true
+      - SPARK_CONF_spark_hadoop_fs_AbstractFileSystem_viewfs_impl=org.apache.hadoop.fs.viewfs.ViewFs
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    networks:
+      - aii-network
+
+  spark-worker-1:
+    #image: apache/spark:latest
+    image: spark-custom:latest
+    container_name: spark-worker-1
+    ports:
+      - "8081:8081"
+      - "4041:4040"      # Spark Application UI
+      - "9998:9999"      # Custom port for additional services
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_WORKER_CORES=2
+      - SPARK_CONF_spark_hadoop_fs_viewfs_impl_disable=true
+      - SPARK_CONF_spark_hadoop_fs_AbstractFileSystem_viewfs_impl=org.apache.hadoop.fs.viewfs.ViewFs
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    depends_on:
+      - spark-master
+    networks:
+      - aii-network
+    volumes:
+      - ./:/opt/spark/mycodeStreaming
+
+networks:
+  aii-network:
+    driver: bridge
